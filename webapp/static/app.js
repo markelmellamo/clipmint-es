@@ -1365,7 +1365,6 @@ async function openBulk(runId) {
     ? prefs.category : "20";
   $("bkKids").checked = !!prefs.kids;
   $("bkPrivacy").value = "schedule";
-  $("bkGap").value = "24";
   $("bkMsg").innerHTML = "";
   // A finished batch leaves this button saying "Close"; a fresh one starts
   // with something to cancel again.
@@ -1492,7 +1491,7 @@ $("bkGo").onclick = async () => {
   $("bkGo").disabled = true;
   $("bkGoLabel").textContent = "Uploading…";
   $("bkCancel").textContent = "Close";
-  [$("bkPrivacy"), $("bkWhen"), $("bkGap"), $("bkCat"), $("bkKids")].forEach((el) => { el.disabled = true; });
+  [$("bkPrivacy"), $("bkCat"), $("bkKids")].forEach((el) => { el.disabled = true; });
   $("bkList").querySelectorAll("input, textarea").forEach((el) => { el.disabled = true; });
 
   // Queue them in order. Each one's words are saved to the clip first when
