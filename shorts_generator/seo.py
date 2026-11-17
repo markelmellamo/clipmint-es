@@ -138,7 +138,7 @@ SOURCE VIDEO
 
 {subject_block}
 
-You are given {n} clips cut from that video, already ranked best to worst by viral potential. For EACH clip, write upload-ready metadata.
+You are given {n} clips cut from that video, already ranked best to worst by viral potential. For EACH clip, write upload-ready metadata.\n\nLANGUAGE REQUIREMENT: Write every human-readable title, description, hook_text, why_it_works, and search_phrase in natural, fluent Spanish (Spain). Preserve proper names, game titles, product names and quoted speech in their original language when appropriate. Tags and hashtags should also be in Spanish where natural, while retaining exact searchable proper names. Do not write English metadata unless the clip itself requires an exact English quote.
 
 THE TWO RULES THAT OUTRANK EVERYTHING BELOW:
 1. ACCURATE. Every claim must be provable from that clip's own WHAT IS ON SCREEN and WHAT IS ACTUALLY SAID blocks. Never promise a reveal the clip does not contain, never name a person, game or number the clip does not support, never imply a stake the clip does not reach. A title the clip fails to deliver gets swiped in two seconds, and short-form ranking punishes that harder than a boring title ever could.
