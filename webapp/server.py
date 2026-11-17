@@ -1692,6 +1692,7 @@ async def _rerender(job, clip: dict, highlight: dict, mute: bool, what: str):
     # to one render of it: a trim or a caption fix afterwards keeps it.
     highlight.setdefault("frame", clip.get("frame"))
     highlight.setdefault("caption_y", clip.get("caption_y"))
+    highlight.setdefault("cam_frame", clip.get("cam_frame"))
 
     def _render():
         out = render_highlights(job.source_path, [highlight], job.spec,
@@ -1908,6 +1909,7 @@ def _frame_geometry(job, clip: dict) -> dict:
         "manual": bool(chosen),
         "moving": not chosen and x is None and follows,
         "cam": cam,
+        "cam_frame": clip.get("cam_frame") or cam,
         # Webcam-over-gameplay was asked for and this clip is the game alone:
         # no face kept turning up in a corner, so there was no panel to make.
         # Said in the editor, because otherwise it only ever reached the log.
@@ -1989,6 +1991,9 @@ class FrameRequest(BaseModel):
     # the layout's own place.
     caption_y: Optional[float] = None
     caption_auto: bool = False
+    # Optional webcam crop in source-video pixels, independently editable.
+    cam_frame: Optional[dict] = None
+    cam_auto: bool = False
 
 
 @app.put("/api/jobs/{job_id}/clips/{filename}/frame")
@@ -2003,6 +2008,21 @@ async def set_frame(job_id: str, filename: str, req: FrameRequest) -> dict:
 
     frame = None if req.auto else framing.normalise({"x": req.x, "y": req.y})
     cap_y = None if req.caption_auto else framing.caption_y(req.caption_y)
+    cam_frame = None
+    if not req.cam_auto and req.cam_frame is not None:
+        from shorts_generator.local.gaming_layout import _probe_dimensions
+        src_w, src_h = _probe_dimensions(job.source_path)
+        try:
+            cx, cy = int(req.cam_frame["x"]), int(req.cam_frame["y"])
+            cw, ch = int(req.cam_frame["w"]), int(req.cam_frame["h"])
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(400, "Invalid webcam frame.")
+        if cw < 80 or ch < 60 or cx < 0 or cy < 0 or cx + cw > src_w or cy + ch > src_h:
+            raise HTTPException(400, "The webcam frame must stay inside the source video.")
+        cam_frame = {"x": cx - cx % 2, "y": cy - cy % 2,
+                     "w": cw - cw % 2, "h": ch - ch % 2}
+    elif not req.cam_auto:
+        cam_frame = clip.get("cam_frame")
     if cap_y is None and not req.caption_auto:
         cap_y = clip.get("caption_y")
 
@@ -2013,6 +2033,7 @@ async def set_frame(job_id: str, filename: str, req: FrameRequest) -> dict:
         "score": clip.get("score"),
         "frame": frame,
         "caption_y": cap_y,
+        "cam_frame": cam_frame,
     }
     if clip.get("heard_words"):
         highlight["heard_words"] = clip["heard_words"]
@@ -2032,6 +2053,7 @@ async def set_frame(job_id: str, filename: str, req: FrameRequest) -> dict:
         "edit": result.get("edit"),
         "frame": frame,
         "caption_y": cap_y,
+        "cam_frame": cam_frame,
         "framing": framing.summary(result.get("layout")),
         "edited": True,
     })
