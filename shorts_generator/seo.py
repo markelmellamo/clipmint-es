@@ -215,7 +215,7 @@ WHY_IT_WORKS: one sentence for the channel owner about the best title: which ang
 CLIPS
 {clips_block}
 
-Respond with ONLY valid JSON, no markdown fences:
+LANGUAGE REQUIREMENT: Write every title option, YouTube description, hashtag, tag, hook_text and why_it_works in natural Spanish (Spain). Preserve proper names, game titles and brand names in their official spelling. Do not copy English prompt wording into the output.\n\nRespond with ONLY valid JSON, no markdown fences:
 {{"clips":[{{"index":int,"title_options":[{{"title":"string","angle":"string","hook":int,"clarity":int,"search":int,"truth":int}}],"description_options":[{{"description":"string","angle":"string","hook":int,"search":int,"clarity":int,"truth":int}}],"tags":[{{"tag":"string","kind":"string"}}],"hashtags":["string"],"hook_text":"string","search_phrase":"string","why_it_works":"string"}}]}}"""
 
 
@@ -256,8 +256,7 @@ TIKTOK
 CLIPS
 {clips_block}
 
-Respond with ONLY valid JSON, no markdown fences:
-{{"clips":[{{"index":int,"reels":{{"caption_options":[{{"caption":"string","angle":"string","hook":int,"search":int,"share":int,"truth":int}}],"hashtags":["string"],"cover_text":"string","alt_text":"string"}},"tiktok":{{"caption":"string","hashtags":["string"]}}}}]}}"""
+LANGUAGE REQUIREMENT: Write all Reels and TikTok captions, cover text, alt text and hashtags in natural Spanish (Spain). Preserve proper names and official product or game titles.\n\nRespond with ONLY valid JSON, no markdown fences:\n{{"clips":[{{"index":int,"reels":{{"caption_options":[{{"caption":"string","angle":"string","hook":int,"search":int,"share":int,"truth":int}}],"hashtags":["string"],"cover_text":"string","alt_text":"string"}},"tiktok":{{"caption":"string","hashtags":["string"]}}}}]}}"""
 
 
 # Asked once per run, before any title is written. It names what the video is
