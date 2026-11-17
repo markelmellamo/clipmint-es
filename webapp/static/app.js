@@ -4243,7 +4243,7 @@ async function toggleFrame() {
   try {
     const g = await api(frameUrl(c, "frame"));
     if (clips[cur] !== c || !p.classList.contains("frame-on")) return;
-    framer = { ...g, clip: c, moved: false, capMoved: false };
+    framer = { ...g, clip: c, moved: false, capMoved: false, camMoved: false, camDrag: null };
     $("frStage").style.aspectRatio = `${g.src_w} / ${g.src_h}`;
     $("frTime").value = 500;
     loadStill();
@@ -4305,7 +4305,7 @@ function drawFrame() {
       width: `${(cam.w / f.src_w) * 100}%`, height: `${(cam.h / f.src_h) * 100}%`,
     });
   }
-  $("frApply").disabled = !(f.moved || f.capMoved);
+  $("frApply").disabled = !(f.moved || f.capMoved || f.camMoved);
 }
 
 // Wherever the pointer goes, the middle of the box follows, kept inside.
@@ -4323,16 +4323,47 @@ function frameAt(e) {
 }
 
 $("frStage").addEventListener("pointerdown", (e) => {
-  if (!framer || $("frStage").classList.contains("fixed")) return;
+  if (!framer) return;
+  if (e.target.closest("#frCam")) {
+    const f = framer, r = $("frStage").getBoundingClientRect();
+    const cam = f.cam_frame || f.cam;
+    if (!cam) return;
+    const resize = e.target.classList.contains("fr-cam-resize");
+    f.camDrag = { resize, px: e.clientX, py: e.clientY, ...cam };
+    $("frStage").setPointerCapture(e.pointerId);
+    $("frStage").classList.add("drag");
+    e.preventDefault();
+    return;
+  }
+  if ($("frStage").classList.contains("fixed")) return;
   $("frStage").setPointerCapture(e.pointerId);
   $("frStage").classList.add("drag");
   frameAt(e);
 });
 $("frStage").addEventListener("pointermove", (e) => {
-  if ($("frStage").classList.contains("drag")) frameAt(e);
+  if (!framer || !$("frStage").classList.contains("drag")) return;
+  const f = framer;
+  if (f.camDrag) {
+    const d = f.camDrag, r = $("frStage").getBoundingClientRect();
+    const dx = (e.clientX - d.px) / r.width * f.src_w;
+    const dy = (e.clientY - d.py) / r.height * f.src_h;
+    const cam = f.cam_frame || f.cam;
+    if (d.resize) {
+      const aspect = d.w / d.h;
+      const nw = Math.max(80, Math.min(f.src_w - d.x, d.w + dx));
+      const nh = Math.max(60, Math.min(f.src_h - d.y, nw / aspect));
+      cam.w = Math.round(nw / 2) * 2; cam.h = Math.round(nh / 2) * 2;
+    } else {
+      cam.x = Math.max(0, Math.min(f.src_w - cam.w, d.x + dx));
+      cam.y = Math.max(0, Math.min(f.src_h - cam.h, d.y + dy));
+      cam.x = Math.round(cam.x / 2) * 2; cam.y = Math.round(cam.y / 2) * 2;
+    }
+    f.cam_frame = { x: cam.x, y: cam.y, w: cam.w, h: cam.h };
+    f.camMoved = true; drawFrame();
+  } else frameAt(e);
 });
 ["pointerup", "pointercancel"].forEach((ev) =>
-  $("frStage").addEventListener(ev, () => $("frStage").classList.remove("drag")));
+  $("frStage").addEventListener(ev, () => { if (framer) framer.camDrag = null; $("frStage").classList.remove("drag"); }));
 
 let stillTimer = null;
 $("frTime").addEventListener("input", () => {
@@ -4389,11 +4420,13 @@ $("frApply").onclick = () => {
   if (f.moved || f.manual) { body.x = f.x; body.y = f.y; } else body.auto = true;
   if (f.capMoved) body.caption_y = Number($("frCapY").value) / 100;
   else if (!f.caption_set) body.caption_auto = true;
+  if (f.camMoved || f.cam_frame) body.cam_frame = f.cam_frame;
+  else body.cam_auto = true;
   sendFrame(body, I18N.t("Framing it again from the source…"), I18N.t("Clip reframed."));
 };
 $("frAuto").onclick = () => {
   if (!framer) return;
-  sendFrame({ auto: true, caption_auto: true },
+  sendFrame({ auto: true, caption_auto: true, cam_auto: true },
             I18N.t("Handing the framing back to the app…"), I18N.t("Back to automatic framing."));
 };
 $("pFrameBtn").onclick = toggleFrame;
