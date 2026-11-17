@@ -1292,12 +1292,13 @@ function clipKey(c) { return `${jobOf(c)}/${c.file}`; }
 
 function bulkRows() { return bulk ? bulk.rows : []; }
 
-// The chosen publish time for the n-th ticked clip, or null when not scheduling.
-function bulkWhen(n) {
+// Each selected clip has its own local publish date/time.
+function bulkWhen(r) {
   if ($("bkPrivacy").value !== "schedule") return null;
-  const first = new Date($("bkWhen").value);
-  if (isNaN(first)) return null;
-  return new Date(first.getTime() + n * (+$("bkGap").value) * 3600 * 1000);
+  const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
+  const value = row && row.querySelector(".bk-publish").value;
+  const when = value ? new Date(value) : null;
+  return when && !isNaN(when) ? when : null;
 }
 
 function bulkWhenText(d) {
@@ -1307,22 +1308,15 @@ function bulkWhenText(d) {
 
 function paintBulkPlan() {
   const scheduling = $("bkPrivacy").value === "schedule";
-  $("bkWhenFld").hidden = !scheduling;
-  $("bkGapFld").hidden = !scheduling;
-  let n = 0;
+
   for (const r of bulkRows()) {
     const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
     if (!row) continue;
     const on = row.querySelector("input[type=checkbox]").checked;
     row.classList.toggle("off", !on);
-    const when = row.querySelector(".bk-when");
-    if (on && scheduling) {
-      const d = bulkWhen(n);
-      when.textContent = d ? bulkWhenText(d) : "";
-    } else {
-      when.textContent = "";
-    }
-    if (on) n++;
+    const when = row.querySelector(".bk-publish");
+    when.hidden = !scheduling;
+    when.disabled = !scheduling || !on;
   }
   if (!bulk.running) {
     $("bkGoLabel").textContent = n === 1 ? "Upload 1 clip" : `Upload ${n} clips`;
@@ -1353,6 +1347,7 @@ async function openBulk(runId) {
     runId, running: false, ids: {},
     rows: run.clips.map((c, idx) => ({
       idx, key: clipKey(c), job: jobOf(c), file: c.file, i: c._i,
+      defaultPublishAt: new Date(new Date(yuDefaultWhen()).getTime() + idx * 24 * 3600 * 1000),
       title: (c.seo && c.seo.title) || c.title || "",
       description: (c.seo && c.seo.description) || "",
       tags: ((c.seo && c.seo.tags) || []).join(", "),
@@ -1371,12 +1366,11 @@ async function openBulk(runId) {
   $("bkKids").checked = !!prefs.kids;
   $("bkPrivacy").value = "schedule";
   $("bkGap").value = "24";
-  $("bkWhen").value = yuDefaultWhen();
   $("bkMsg").innerHTML = "";
   // A finished batch leaves this button saying "Close"; a fresh one starts
   // with something to cancel again.
   $("bkCancel").textContent = I18N.t("Cancel");
-  [$("bkPrivacy"), $("bkWhen"), $("bkGap"), $("bkCat"), $("bkKids")].forEach((el) => {
+  [$("bkPrivacy"), $("bkCat"), $("bkKids")].forEach((el) => {
     el.disabled = false;
   });
 
@@ -1385,8 +1379,9 @@ async function openBulk(runId) {
       <input type="checkbox" ${r.done || r.unwritten ? "" : "checked"} aria-label="Include this clip">
       <video class="bk-thumb" src="${esc(r.url)}#t=0.5" preload="metadata" muted playsinline></video>
       <div class="bk-fields">
-        <div class="bk-top"><b>#${esc(r.rank)}</b><span class="bk-when"></span>
+        <div class="bk-top"><b>#${esc(r.rank)}</b>
           <span class="bk-count"></span><span class="bk-state"></span></div>
+        <label class="bk-schedule"><span>Publicar el</span><input type="datetime-local" class="bk-publish" aria-label="Fecha y hora de publicación"></label>
         <input type="text" class="bk-title" spellcheck="false" aria-label="Title">
         <details>
           <summary>Description and tags</summary>
@@ -1407,6 +1402,12 @@ async function openBulk(runId) {
     title.value = r.title;
     row.querySelector(".bk-desc").value = r.description;
     row.querySelector(".bk-tags").value = r.tags;
+    row.querySelector(".bk-publish").value = (() => {
+      const d = r.defaultPublishAt;
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
+    row.querySelector(".bk-publish").addEventListener("change", paintBulkPlan);
     const count = row.querySelector(".bk-count");
     const paint = () => {
       count.textContent = `${title.value.trim().length}/100`;
@@ -1421,7 +1422,7 @@ async function openBulk(runId) {
   $("bulk").classList.remove("hidden");
 }
 
-["bkPrivacy", "bkWhen", "bkGap"].forEach((id) => $(id).addEventListener("change", paintBulkPlan));
+["bkPrivacy"].forEach((id) => $(id).addEventListener("change", paintBulkPlan));
 
 function closeBulk() {
   $("bulk").classList.add("hidden");
@@ -1448,10 +1449,15 @@ $("bkGo").onclick = async () => {
   if (!bulk || bulk.running) return;
   const privacy = $("bkPrivacy").value;
   if (privacy === "schedule") {
-    const first = bulkWhen(0);
-    if (!first || first.getTime() < Date.now() + 10 * 60 * 1000) {
-      $("bkMsg").innerHTML = `<div class="err">Pick a first publish time at least 10 minutes from now.</div>`;
-      return;
+    for (const r of bulk.rows) {
+      const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
+      if (!row.querySelector("input[type=checkbox]").checked) continue;
+      const when = bulkWhen(r);
+      if (!when || when.getTime() < Date.now() + 10 * 60 * 1000) {
+        $("bkMsg").innerHTML = `<div class="err">Elige una fecha y hora válida (al menos 10 minutos desde ahora) para cada clip seleccionado.</div>`;
+        row.querySelector(".bk-publish").focus();
+        return;
+      }
     }
   }
 
@@ -1494,7 +1500,7 @@ $("bkGo").onclick = async () => {
   let n = 0;
   for (const item of chosen) {
     const { r } = item;
-    const when = bulkWhen(n++);
+    const when = bulkWhen(r);
     try {
       if (!r.hasSeo || item.title !== r.title || item.description !== r.description
           || item.tags !== r.tags) {
