@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -851,7 +851,7 @@ addEventListener("load", function () {
       </div>
       <div class="fr-stage" id="frStage">
         <img id="frStill" alt="The whole source picture at this moment, with the part the Short shows marked">
-        <div class="fr-cam hidden" id="frCam"><span>Webcam</span></div>
+        <div class="fr-cam hidden" id="frCam"><span>Webcam · arrastra para mover</span><i class="fr-cam-resize" title="Redimensionar webcam"></i></div>
         <div class="fr-win" id="frWin"></div>
         <div class="fr-load" id="frLoad"><span class="spin"></span></div>
       </div>
@@ -1079,16 +1079,6 @@ addEventListener("load", function () {
           <option value="public">Public, all now</option>
           <option value="unlisted">Unlisted</option>
           <option value="private">Private</option>
-        </select></label>
-      <label class="fld" id="bkWhenFld"><span>First goes public at</span>
-        <input type="datetime-local" id="bkWhen"></label>
-      <label class="fld" id="bkGapFld"><span>Then one every</span>
-        <select id="bkGap">
-          <option value="3">3 hours</option>
-          <option value="6">6 hours</option>
-          <option value="12">12 hours</option>
-          <option value="24">day</option>
-          <option value="48">2 days</option>
         </select></label>
       <label class="fld"><span>Category</span><select id="bkCat"></select></label>
       <label class="check bk-kids"><input type="checkbox" id="bkKids"><span>Made for kids</span></label>

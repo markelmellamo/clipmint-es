@@ -664,7 +664,7 @@ window.I18N = (function () {
       "Apply": "Aplicar",
       "Drag the box over what the Short should show. It stays there for the whole clip, and a trim or a caption fix afterwards keeps it.": "Arrastra el recuadro sobre lo que debe mostrar el Short. Se queda ahí durante todo el clip, y un recorte o una corrección de subtítulos posterior lo conserva.",
       "This clip already shows the whole picture across. There is nothing to move, but the captions can go higher or lower.": "Este clip ya muestra toda la imagen de lado a lado. No hay nada que mover, pero los subtítulos pueden ir más arriba o más abajo.",
-      "Your webcam is found automatically. This moves the part of the game shown under it.": "Tu webcam se detecta automáticamente. Esto mueve la parte del juego que se ve debajo.",
+      "Drag the webcam box to move its crop; use the lower-right handle to resize it.": "Arrastra el recuadro de la webcam para mover el recorte; usa el tirador inferior derecho para cambiar su tamaño.",
       "No webcam was found in this clip, so it shows the game on its own. If yours sits in a corner, say which in the box, like “webcam bottom left”, and run it again.":
         "No se encontró ninguna webcam en este clip, así que muestra solo el juego. Si la tuya está en una esquina, di cuál en el cuadro, por ejemplo “webcam bottom left”, y vuelve a generarlo.",
       "Placed by hand. Back to automatic hands it back to the app.": "Colocado a mano. Volver a automático se lo devuelve a la app.",
@@ -2408,14 +2408,13 @@ window.I18N = (function () {
 
   const STORE_KEY = "ui-lang";
 
-  // English on a fresh install, always. The browser's own locale is
-  // deliberately not consulted: a machine set to another language would
-  // otherwise hand a first-run user an interface nobody chose.
-  let lang = "en";
+  // Spanish is the default for this fork. A saved language choice still
+  // takes precedence, so existing users keep the language they selected.
+  let lang = "es";
   try {
     const saved = localStorage.getItem(STORE_KEY);
     if (saved && (saved === "en" || DICT[saved])) lang = saved;
-  } catch (e) { /* private mode: stay on English */ }
+  } catch (e) { /* private mode: stay on Spanish */ }
 
   function t(s) {
     if (typeof s !== "string" || lang === "en") return s;

@@ -1292,12 +1292,13 @@ function clipKey(c) { return `${jobOf(c)}/${c.file}`; }
 
 function bulkRows() { return bulk ? bulk.rows : []; }
 
-// The chosen publish time for the n-th ticked clip, or null when not scheduling.
-function bulkWhen(n) {
+// Each selected clip has its own local publish date/time.
+function bulkWhen(r) {
   if ($("bkPrivacy").value !== "schedule") return null;
-  const first = new Date($("bkWhen").value);
-  if (isNaN(first)) return null;
-  return new Date(first.getTime() + n * (+$("bkGap").value) * 3600 * 1000);
+  const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
+  const value = row && row.querySelector(".bk-publish").value;
+  const when = value ? new Date(value) : null;
+  return when && !isNaN(when) ? when : null;
 }
 
 function bulkWhenText(d) {
@@ -1307,21 +1308,16 @@ function bulkWhenText(d) {
 
 function paintBulkPlan() {
   const scheduling = $("bkPrivacy").value === "schedule";
-  $("bkWhenFld").hidden = !scheduling;
-  $("bkGapFld").hidden = !scheduling;
   let n = 0;
+
   for (const r of bulkRows()) {
     const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
     if (!row) continue;
     const on = row.querySelector("input[type=checkbox]").checked;
     row.classList.toggle("off", !on);
-    const when = row.querySelector(".bk-when");
-    if (on && scheduling) {
-      const d = bulkWhen(n);
-      when.textContent = d ? bulkWhenText(d) : "";
-    } else {
-      when.textContent = "";
-    }
+    const when = row.querySelector(".bk-publish");
+    when.closest(".bk-schedule").hidden = !scheduling;
+    when.disabled = !scheduling || !on;
     if (on) n++;
   }
   if (!bulk.running) {
@@ -1353,6 +1349,7 @@ async function openBulk(runId) {
     runId, running: false, ids: {},
     rows: run.clips.map((c, idx) => ({
       idx, key: clipKey(c), job: jobOf(c), file: c.file, i: c._i,
+      defaultPublishAt: new Date(new Date(yuDefaultWhen()).getTime() + idx * 24 * 3600 * 1000),
       title: (c.seo && c.seo.title) || c.title || "",
       description: (c.seo && c.seo.description) || "",
       tags: ((c.seo && c.seo.tags) || []).join(", "),
@@ -1370,13 +1367,11 @@ async function openBulk(runId) {
     ? prefs.category : "20";
   $("bkKids").checked = !!prefs.kids;
   $("bkPrivacy").value = "schedule";
-  $("bkGap").value = "24";
-  $("bkWhen").value = yuDefaultWhen();
   $("bkMsg").innerHTML = "";
   // A finished batch leaves this button saying "Close"; a fresh one starts
   // with something to cancel again.
   $("bkCancel").textContent = I18N.t("Cancel");
-  [$("bkPrivacy"), $("bkWhen"), $("bkGap"), $("bkCat"), $("bkKids")].forEach((el) => {
+  [$("bkPrivacy"), $("bkCat"), $("bkKids")].forEach((el) => {
     el.disabled = false;
   });
 
@@ -1385,8 +1380,9 @@ async function openBulk(runId) {
       <input type="checkbox" ${r.done || r.unwritten ? "" : "checked"} aria-label="Include this clip">
       <video class="bk-thumb" src="${esc(r.url)}#t=0.5" preload="metadata" muted playsinline></video>
       <div class="bk-fields">
-        <div class="bk-top"><b>#${esc(r.rank)}</b><span class="bk-when"></span>
+        <div class="bk-top"><b>#${esc(r.rank)}</b>
           <span class="bk-count"></span><span class="bk-state"></span></div>
+        <label class="bk-schedule"><span>Publicar el</span><input type="datetime-local" class="bk-publish" aria-label="Fecha y hora de publicación"></label>
         <input type="text" class="bk-title" spellcheck="false" aria-label="Title">
         <details>
           <summary>Description and tags</summary>
@@ -1407,6 +1403,12 @@ async function openBulk(runId) {
     title.value = r.title;
     row.querySelector(".bk-desc").value = r.description;
     row.querySelector(".bk-tags").value = r.tags;
+    row.querySelector(".bk-publish").value = (() => {
+      const d = r.defaultPublishAt;
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
+    row.querySelector(".bk-publish").addEventListener("change", paintBulkPlan);
     const count = row.querySelector(".bk-count");
     const paint = () => {
       count.textContent = `${title.value.trim().length}/100`;
@@ -1421,7 +1423,7 @@ async function openBulk(runId) {
   $("bulk").classList.remove("hidden");
 }
 
-["bkPrivacy", "bkWhen", "bkGap"].forEach((id) => $(id).addEventListener("change", paintBulkPlan));
+["bkPrivacy"].forEach((id) => $(id).addEventListener("change", paintBulkPlan));
 
 function closeBulk() {
   $("bulk").classList.add("hidden");
@@ -1448,10 +1450,15 @@ $("bkGo").onclick = async () => {
   if (!bulk || bulk.running) return;
   const privacy = $("bkPrivacy").value;
   if (privacy === "schedule") {
-    const first = bulkWhen(0);
-    if (!first || first.getTime() < Date.now() + 10 * 60 * 1000) {
-      $("bkMsg").innerHTML = `<div class="err">Pick a first publish time at least 10 minutes from now.</div>`;
-      return;
+    for (const r of bulk.rows) {
+      const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
+      if (!row.querySelector("input[type=checkbox]").checked) continue;
+      const when = bulkWhen(r);
+      if (!when || when.getTime() < Date.now() + 10 * 60 * 1000) {
+        $("bkMsg").innerHTML = `<div class="err">Elige una fecha y hora válida (al menos 10 minutos desde ahora) para cada clip seleccionado.</div>`;
+        row.querySelector(".bk-publish").focus();
+        return;
+      }
     }
   }
 
@@ -1486,7 +1493,7 @@ $("bkGo").onclick = async () => {
   $("bkGo").disabled = true;
   $("bkGoLabel").textContent = "Uploading…";
   $("bkCancel").textContent = "Close";
-  [$("bkPrivacy"), $("bkWhen"), $("bkGap"), $("bkCat"), $("bkKids")].forEach((el) => { el.disabled = true; });
+  [$("bkPrivacy"), $("bkCat"), $("bkKids")].forEach((el) => { el.disabled = true; });
   $("bkList").querySelectorAll("input, textarea").forEach((el) => { el.disabled = true; });
 
   // Queue them in order. Each one's words are saved to the clip first when
@@ -1494,7 +1501,7 @@ $("bkGo").onclick = async () => {
   let n = 0;
   for (const item of chosen) {
     const { r } = item;
-    const when = bulkWhen(n++);
+    const when = bulkWhen(r);
     try {
       if (!r.hasSeo || item.title !== r.title || item.description !== r.description
           || item.tags !== r.tags) {
@@ -4236,7 +4243,7 @@ async function toggleFrame() {
   try {
     const g = await api(frameUrl(c, "frame"));
     if (clips[cur] !== c || !p.classList.contains("frame-on")) return;
-    framer = { ...g, clip: c, moved: false, capMoved: false };
+    framer = { ...g, clip: c, moved: false, capMoved: false, camMoved: false, camDrag: null };
     $("frStage").style.aspectRatio = `${g.src_w} / ${g.src_h}`;
     $("frTime").value = 500;
     loadStill();
@@ -4259,7 +4266,7 @@ async function toggleFrame() {
 function frameNote(g, travels) {
   if (!travels) return I18N.t("This clip already shows the whole picture across. There is nothing to move, but the captions can go higher or lower.");
   if (g.no_webcam) return I18N.t("No webcam was found in this clip, so it shows the game on its own. If yours sits in a corner, say which in the box, like “webcam bottom left”, and run it again.");
-  if (g.panel === "gameplay") return I18N.t("Your webcam is found automatically. This moves the part of the game shown under it.");
+  if (g.panel === "gameplay") return I18N.t("Drag the webcam box to move its crop; use the lower-right handle to resize it.");
   if (g.manual) return I18N.t("Placed by hand. Back to automatic hands it back to the app.");
   if (g.moving) return I18N.t("Right now the frame follows the face, or whoever is talking. Placing it holds it still for the whole clip.");
   return "";
@@ -4290,7 +4297,7 @@ function drawFrame() {
   box.top = `${(top / f.src_h) * 100}%`;
   box.width = `${(f.win_w / f.src_w) * 100}%`;
   box.height = `${(f.win_h / f.src_h) * 100}%`;
-  const cam = f.panel === "gameplay" ? f.cam : null;
+  const cam = f.panel === "gameplay" ? (f.cam_frame || f.cam) : null;
   $("frCam").classList.toggle("hidden", !cam);
   if (cam) {
     Object.assign($("frCam").style, {
@@ -4298,7 +4305,7 @@ function drawFrame() {
       width: `${(cam.w / f.src_w) * 100}%`, height: `${(cam.h / f.src_h) * 100}%`,
     });
   }
-  $("frApply").disabled = !(f.moved || f.capMoved);
+  $("frApply").disabled = !(f.moved || f.capMoved || f.camMoved);
 }
 
 // Wherever the pointer goes, the middle of the box follows, kept inside.
@@ -4316,16 +4323,47 @@ function frameAt(e) {
 }
 
 $("frStage").addEventListener("pointerdown", (e) => {
-  if (!framer || $("frStage").classList.contains("fixed")) return;
+  if (!framer) return;
+  if (e.target.closest("#frCam")) {
+    const f = framer, r = $("frStage").getBoundingClientRect();
+    const cam = f.cam_frame || f.cam;
+    if (!cam) return;
+    const resize = e.target.classList.contains("fr-cam-resize");
+    f.camDrag = { resize, px: e.clientX, py: e.clientY, ...cam };
+    $("frStage").setPointerCapture(e.pointerId);
+    $("frStage").classList.add("drag");
+    e.preventDefault();
+    return;
+  }
+  if ($("frStage").classList.contains("fixed")) return;
   $("frStage").setPointerCapture(e.pointerId);
   $("frStage").classList.add("drag");
   frameAt(e);
 });
 $("frStage").addEventListener("pointermove", (e) => {
-  if ($("frStage").classList.contains("drag")) frameAt(e);
+  if (!framer || !$("frStage").classList.contains("drag")) return;
+  const f = framer;
+  if (f.camDrag) {
+    const d = f.camDrag, r = $("frStage").getBoundingClientRect();
+    const dx = (e.clientX - d.px) / r.width * f.src_w;
+    const dy = (e.clientY - d.py) / r.height * f.src_h;
+    const cam = f.cam_frame || f.cam;
+    if (d.resize) {
+      const aspect = d.w / d.h;
+      const nw = Math.max(80, Math.min(f.src_w - d.x, d.w + Math.max(dx, dy * aspect)));
+      const nh = Math.max(60, Math.min(f.src_h - d.y, nw / aspect));
+      cam.w = Math.round(nw / 2) * 2; cam.h = Math.round(nh / 2) * 2;
+    } else {
+      cam.x = Math.max(0, Math.min(f.src_w - cam.w, d.x + dx));
+      cam.y = Math.max(0, Math.min(f.src_h - cam.h, d.y + dy));
+      cam.x = Math.round(cam.x / 2) * 2; cam.y = Math.round(cam.y / 2) * 2;
+    }
+    f.cam_frame = { x: cam.x, y: cam.y, w: cam.w, h: cam.h };
+    f.camMoved = true; drawFrame();
+  } else frameAt(e);
 });
 ["pointerup", "pointercancel"].forEach((ev) =>
-  $("frStage").addEventListener(ev, () => $("frStage").classList.remove("drag")));
+  $("frStage").addEventListener(ev, () => { if (framer) framer.camDrag = null; $("frStage").classList.remove("drag"); }));
 
 let stillTimer = null;
 $("frTime").addEventListener("input", () => {
@@ -4382,11 +4420,14 @@ $("frApply").onclick = () => {
   if (f.moved || f.manual) { body.x = f.x; body.y = f.y; } else body.auto = true;
   if (f.capMoved) body.caption_y = Number($("frCapY").value) / 100;
   else if (!f.caption_set) body.caption_auto = true;
+  if (f.camMoved) body.cam_frame = f.cam_frame;
+  else if (f.cam_frame_set) body.cam_frame = f.cam_frame;
+  else body.cam_auto = true;
   sendFrame(body, I18N.t("Framing it again from the source…"), I18N.t("Clip reframed."));
 };
 $("frAuto").onclick = () => {
   if (!framer) return;
-  sendFrame({ auto: true, caption_auto: true },
+  sendFrame({ auto: true, caption_auto: true, cam_auto: true },
             I18N.t("Handing the framing back to the app…"), I18N.t("Back to automatic framing."));
 };
 $("pFrameBtn").onclick = toggleFrame;

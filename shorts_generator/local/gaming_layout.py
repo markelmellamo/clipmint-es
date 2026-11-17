@@ -405,6 +405,7 @@ def render_stacked_clip(
     face_context_multiple: float = FACE_CONTEXT_MULTIPLE,
     log_label: str = "",
     frame: Optional[Dict] = None,
+    cam_frame: Optional[Dict] = None,
 ) -> Dict:
     """Cut [start, end] and render it as webcam-over-gameplay in one ffmpeg pass.
 
@@ -419,6 +420,19 @@ def render_stacked_clip(
     cam = locate_webcam(source_path, start, end, corner=corner,
                         face_context_multiple=face_context_multiple,
                         panel_aspect=out_w / cam_h)
+    # A user-adjusted webcam crop is stored in source pixels. Clamp it to the
+    # source and keep even coordinates/sizes for ffmpeg's yuv420p encoder.
+    if cam and not cam.get("full_frame") and cam_frame:
+        try:
+            cx, cy = int(cam_frame["x"]), int(cam_frame["y"])
+            cw, ch = int(cam_frame["w"]), int(cam_frame["h"])
+            cx, cy = max(0, min(src_w - 2, cx)), max(0, min(src_h - 2, cy))
+            cw, ch = max(80, min(src_w - cx, cw)), max(60, min(src_h - cy, ch))
+            cx, cy, cw, ch = cx - cx % 2, cy - cy % 2, cw - cw % 2, ch - ch % 2
+            if cw >= 80 and ch >= 60:
+                cam = {**cam, "x": cx, "y": cy, "w": cw, "h": ch, "manual": True}
+        except (KeyError, TypeError, ValueError):
+            pass
 
     # Said here, before the encode, rather than after it. Whether the webcam
     # was found decides which of the layouts below gets rendered, and that
@@ -521,6 +535,7 @@ def render_stacked_highlights(
                 face_context_multiple=face_context_multiple,
                 log_label=f"[stack] {i}",
                 frame=h.get("frame"),
+                cam_frame=h.get("cam_frame"),
             )
             results.append({**h, "clip_url": out_path, "layout": info})
         except Exception as e:
