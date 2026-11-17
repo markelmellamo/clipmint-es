@@ -1784,6 +1784,7 @@ async def fix_captions(job_id: str, filename: str, req: CaptionFixRequest) -> di
         "hook_replay_seconds": result.get("hook_replay_seconds"),
         "edit": result.get("edit"),
         "caption_words": words,
+        "cam_frame": clip.get("cam_frame"),
         "framing": framing.summary(result.get("layout")),
     })
     return updated or {}
@@ -1834,6 +1835,7 @@ async def trim_clip(job_id: str, filename: str, req: TrimRequest) -> dict:
         # belongs to the old one.
         "heard_words": result.get("heard_words"),
         "caption_words": None,
+        "cam_frame": clip.get("cam_frame"),
         "muted": bool(req.mute),
         "edited": True,
         "framing": framing.summary(result.get("layout")),
@@ -1910,6 +1912,7 @@ def _frame_geometry(job, clip: dict) -> dict:
         "moving": not chosen and x is None and follows,
         "cam": cam,
         "cam_frame": clip.get("cam_frame") or cam,
+        "cam_frame_set": bool(clip.get("cam_frame")),
         # Webcam-over-gameplay was asked for and this clip is the game alone:
         # no face kept turning up in a corner, so there was no panel to make.
         # Said in the editor, because otherwise it only ever reached the log.
