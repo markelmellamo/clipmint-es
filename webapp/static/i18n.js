@@ -2408,10 +2408,10 @@ window.I18N = (function () {
 
   const STORE_KEY = "ui-lang";
 
-  // English on a fresh install, always. The browser's own locale is
-  // deliberately not consulted: a machine set to another language would
-  // otherwise hand a first-run user an interface nobody chose.
-  let lang = "en";
+  // Spanish is the first-run language for this localized fork. A saved
+  // language choice still takes precedence, and the browser locale is not
+  // consulted so the first launch is predictable.
+  let lang = "es";
   try {
     const saved = localStorage.getItem(STORE_KEY);
     if (saved && (saved === "en" || DICT[saved])) lang = saved;
