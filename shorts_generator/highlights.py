@@ -328,7 +328,7 @@ Rules:
   moment is purely spoken, which is fine for a podcast and a warning sign for
   gameplay
 
-Respond ONLY with valid JSON (no markdown, no explanation):
+Language requirement: Write each generated clip title, virality_reason and on_screen description in natural Spanish (Spain). Keep first_line and hook_sentence verbatim in the original spoken language because they must match the transcript exactly. Do not translate transcript quotations.\n\nRespond ONLY with valid JSON (no markdown, no explanation):
 {{"highlights":[{{"title":"string","start_time":float,"end_time":float,"score":int,"hook_score":int,"first_line":"string","hook_sentence":"string","virality_reason":"string","on_screen":"string","ask":int}}]}}"""
 
 
