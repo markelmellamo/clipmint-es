@@ -1308,6 +1308,7 @@ function bulkWhenText(d) {
 
 function paintBulkPlan() {
   const scheduling = $("bkPrivacy").value === "schedule";
+  let n = 0;
 
   for (const r of bulkRows()) {
     const row = $("bkList").querySelector(`[data-bk="${r.idx}"]`);
@@ -1317,6 +1318,7 @@ function paintBulkPlan() {
     const when = row.querySelector(".bk-publish");
     when.hidden = !scheduling;
     when.disabled = !scheduling || !on;
+    if (on) n++;
   }
   if (!bulk.running) {
     $("bkGoLabel").textContent = n === 1 ? "Upload 1 clip" : `Upload ${n} clips`;
