@@ -4297,7 +4297,7 @@ function drawFrame() {
   box.top = `${(top / f.src_h) * 100}%`;
   box.width = `${(f.win_w / f.src_w) * 100}%`;
   box.height = `${(f.win_h / f.src_h) * 100}%`;
-  const cam = f.panel === "gameplay" ? f.cam : null;
+  const cam = f.panel === "gameplay" ? (f.cam_frame || f.cam) : null;
   $("frCam").classList.toggle("hidden", !cam);
   if (cam) {
     Object.assign($("frCam").style, {
@@ -4420,7 +4420,8 @@ $("frApply").onclick = () => {
   if (f.moved || f.manual) { body.x = f.x; body.y = f.y; } else body.auto = true;
   if (f.capMoved) body.caption_y = Number($("frCapY").value) / 100;
   else if (!f.caption_set) body.caption_auto = true;
-  if (f.camMoved || f.cam_frame) body.cam_frame = f.cam_frame;
+  if (f.camMoved) body.cam_frame = f.cam_frame;
+  else if (f.cam_frame_set) body.cam_frame = f.cam_frame;
   else body.cam_auto = true;
   sendFrame(body, I18N.t("Framing it again from the source…"), I18N.t("Clip reframed."));
 };
