@@ -224,6 +224,8 @@ Respond with ONLY valid JSON, no markdown fences:
 # hook already chosen instead of inventing a second, competing angle.
 SOCIAL_PROMPT = """You are an expert social media strategist and growth hacker. The clips below are already packaged for YouTube Shorts. Now package each one for INSTAGRAM REELS and TIKTOK.
 
+LANGUAGE REQUIREMENT: Write every human-readable caption, hook, and explanation in natural, fluent Spanish (Spain). Preserve proper names and exact quoted speech in their original language when appropriate. Use Spanish hashtags where natural.
+
 Follow the growth playbook for each platform. They reward different things - Reels grow on sends and a caption's first 125 characters, TikTok is searched like a search engine - so write natively for each. Never paste the YouTube text.
 
 GROWTH PLAYBOOK
