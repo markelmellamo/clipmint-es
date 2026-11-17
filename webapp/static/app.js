@@ -1316,7 +1316,7 @@ function paintBulkPlan() {
     const on = row.querySelector("input[type=checkbox]").checked;
     row.classList.toggle("off", !on);
     const when = row.querySelector(".bk-publish");
-    when.hidden = !scheduling;
+    when.closest(".bk-schedule").hidden = !scheduling;
     when.disabled = !scheduling || !on;
     if (on) n++;
   }
